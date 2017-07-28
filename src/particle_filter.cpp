@@ -125,6 +125,13 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+	const double landmark_std_x = std_landmark[0];
+	const double landmark_std_y = std_landmark[1];
+
+	const long double multiplier = 1.0/(2*M_PI*landmark_std_x*landmark_std_y);
+	const double cov_x = pow(landmark_std_x, 2.0);
+	const double cov_y = pow(landmark_std_y, 2.0);
 	
 	for (int i = 0 ; i < num_particles ; i++) {
 		vector<LandmarkObs> map_landmarks_within_range;
@@ -137,7 +144,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 		for(int j = 0 ; j < observations.size() ; j++) {
 			LandmarkObs lm;
-			LandmarkObs o = observations[i];
+			LandmarkObs o = observations[j];
 			lm.x = p_x + (o.x * cos(p_theta) - o.y*sin(p_theta));
 			lm.y = p_y + (o.x * sin(p_theta) + o.y * cos(p_theta));
 			lm.id = o.id;
@@ -167,27 +174,22 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		// multivariate Gaussian probabilty density
 		double particle_weight = 1.0;
 
-		double landmark_std_x = std_landmark[0];
-		double landmark_std_y = std_landmark[1];
-
-		long double multiplier = 1.0/(2*M_PI*landmark_std_x*landmark_std_y);
-		double cov_x = pow(landmark_std_x, 2.0);
-		double cov_y = pow(landmark_std_y, 2.0);
+		
 
 		for (int k = 0 ; k < observations_in_global_space.size() ; k++) {
 
 			LandmarkObs observation = observations_in_global_space[k];
 
 			LandmarkObs predicted_landmark;
-			for (int j = 0 ; j < map_landmarks.landmark_list.size() ; j++) {
-				if (map_landmarks.landmark_list[j].id_i == observation.id) {
-					predicted_landmark.x = map_landmarks.landmark_list[j].x_f;
-					predicted_landmark.y = map_landmarks.landmark_list[j].y_f;
-					predicted_landmark.id = map_landmarks.landmark_list[j].id_i;
-					break;
-				}
-			}
 			
+			predicted_landmark.x = map_landmarks.landmark_list[observation.id-1].x_f;
+			predicted_landmark.y = map_landmarks.landmark_list[observation.id-1].y_f;
+			predicted_landmark.id = map_landmarks.landmark_list[observation.id-1].id_i;
+			
+			
+
+
+
 			particle_weight *= exp(-pow(observation.x - predicted_landmark.x, 2.0)/(2.0*cov_x) - pow(observation.y - predicted_landmark.y, 2.0)/(2.0*cov_y));
 			particle_weight *= multiplier;
 		}
@@ -215,32 +217,6 @@ void ParticleFilter::resample() {
 	}
 
 	particles = new_particles;
-
-
-
-
-// First try, did not work ...?
-// ******************************* TODO **************
-	// std::vector<Particle> new_particles;
-
-	// int index = rand() % num_particles;
-
-	// double beta = 0.0;
-	// double max_weight = *max_element(weights.begin(), weights.end());
-
-
-	// for (int i = 0 ; i < num_particles ; i++) {
-	// 	beta += rand() * 2.0 * max_weight;
-	// 	while (beta > weights[index]) {
-	// 		beta -= weights[index];
-	// 		index = (index+1) % num_particles;
-	// 	}
-	// 	new_particles.push_back(particles[index]);
-	// }
-
-	// particles = new_particles;
-
-  // ******************************* TODO **************
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
